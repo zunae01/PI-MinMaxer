@@ -2,8 +2,6 @@ import { useState } from "react";
 import { formatDate } from "../utils/format";
 
 export default function SessionSidebar({ sessions, activeSessionId, onCreate, onSelect, onDelete }) {
-  const [name, setName] = useState("");
-
   return (
     <aside className="panel sessions">
       <div className="panel-header">
@@ -12,8 +10,7 @@ export default function SessionSidebar({ sessions, activeSessionId, onCreate, on
           <p className="hint">Local-only, auto-saved. Select a session to work on it.</p>
         </div>
         <div className="session-create">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Optional name" />
-          <button className="accent" onClick={() => { onCreate(name); setName(""); }}>Create</button>
+          <button className="accent" onClick={() => onCreate()}>Create session</button>
         </div>
       </div>
       <div className="session-list">

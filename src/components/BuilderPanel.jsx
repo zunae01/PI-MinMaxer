@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PLANET_TYPES, P0_TO_P1 } from "../data";
 
 export default function BuilderPanel({
@@ -52,6 +52,13 @@ export default function BuilderPanel({
     });
     setPlanetDraft((prev) => ({ ...prev, densities: next }));
   }, [planetDraft.type]);
+
+  // Keep planet system selection synced to active system when not editing an existing planet.
+  useEffect(() => {
+    if (!planetDraft.id && activeSystemId) {
+      setPlanetDraft((prev) => ({ ...prev, systemId: activeSystemId }));
+    }
+  }, [activeSystemId, planetDraft.id]);
 
   return (
     <section className="panel workspace">
@@ -121,7 +128,7 @@ export default function BuilderPanel({
                 </label>
                 <label>Assign to system
                   <select
-                    value={planetDraft.systemId || ""}
+                    value={planetDraft.systemId || activeSystemId || ""}
                     onChange={(e) => setPlanetDraft((p) => ({ ...p, systemId: e.target.value }))}
                     required
                   >
@@ -134,29 +141,23 @@ export default function BuilderPanel({
               </div>
               <div className="p0-inputs">
                 {p0List.map((p0) => (
-                  <div key={p0} className="p0-field">
-                    <label>
-                      <span>{p0}</span>
-                      <span>{P0_TO_P1[p0]?.p1}</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="1000"
-                      step="1"
-                      value={planetDraft.densities[p0] ?? 0}
-                      onChange={(e) =>
-                        setPlanetDraft((p) => ({
-                          ...p,
-                          densities: { ...p.densities, [p0]: Number(e.target.value) || 0 },
-                        }))
-                      }
-                    />
-                  </div>
+                  <DensityInput
+                    key={p0}
+                    labelLeft={p0}
+                    labelRight={P0_TO_P1[p0]?.p1}
+                    value={planetDraft.densities[p0] ?? 0}
+                    max={100}
+                    onChange={(val) =>
+                      setPlanetDraft((p) => ({
+                        ...p,
+                        densities: { ...p.densities, [p0]: val },
+                      }))
+                    }
+                  />
                 ))}
               </div>
               <div className="form-actions">
-                <button className="accent" type="submit">{planetDraft.id ? "Update planet" : "Save planet"}</button>
+                <button className="accent" type="submit">{planetDraft.id ? "Update planet" : "Add planet to System"}</button>
                 {planetDraft.id && (
                   <button type="button" className="ghost" onClick={() => setPlanetDraft(blankPlanetDraft(activeSystemId))}>
                     Cancel
@@ -199,4 +200,53 @@ function blankPlanetDraft(systemId = "") {
   const densities = {};
   (PLANET_TYPES[firstType] || []).forEach((p0) => (densities[p0] = 0));
   return { id: null, name: "", type: firstType, systemId, densities };
+}
+
+function DensityInput({ labelLeft, labelRight, value, max = 100, onChange }) {
+  const [dragging, setDragging] = useState(false);
+  const start = useRef({ x: 0, value: 0 });
+
+  const pct = Math.min(100, Math.max(0, (value / max) * 100));
+  const handleMouseDown = (e) => {
+    setDragging(true);
+    start.current = { x: e.clientX, value: value || 0 };
+  };
+
+  useEffect(() => {
+    if (!dragging) return;
+    const move = (e) => {
+      const dx = e.clientX - start.current.x;
+      const delta = dx * (max / 150); // ~150px drag covers full range
+      const next = Math.min(max, Math.max(0, start.current.value + delta));
+      onChange(Math.round(next));
+    };
+    const up = () => setDragging(false);
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+    return () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+  }, [dragging, max, onChange]);
+
+  return (
+    <div className="p0-field density-field">
+      <label>
+        <span>{labelLeft}</span>
+        <span>{labelRight}</span>
+      </label>
+      <input
+        type="number"
+        min="0"
+        max={max}
+        step="1"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value) || 0)}
+        onMouseDown={handleMouseDown}
+        style={{
+          background: `linear-gradient(90deg, rgba(45,226,230,0.25) ${pct}%, rgba(16,24,43,0.6) ${pct}%)`,
+        }}
+      />
+    </div>
+  );
 }

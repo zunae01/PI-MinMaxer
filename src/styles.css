@@ -91,8 +91,7 @@ button.ghost { background: transparent; border-color: var(--border); color: var(
 }
 
 .sessions { height: calc(100vh - 120px); overflow-y: auto; position: sticky; top: 96px; }
-.session-create { display: flex; gap: 8px; align-items: center; }
-.session-create input { flex: 1; }
+.session-create { display: flex; justify-content: flex-end; }
 .session-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .session-card { display: flex; gap: 10px; border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--card); }
 .session-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(45, 226, 230, 0.3); }
@@ -128,6 +127,7 @@ button.ghost { background: transparent; border-color: var(--border); color: var(
 .p0-field { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; padding: 8px; }
 .p0-field label { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; }
 .p0-field input { width: 100%; margin-top: 4px; }
+.density-field input { cursor: ew-resize; }
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 .planet-list { margin-top: 10px; display: grid; gap: 10px; }

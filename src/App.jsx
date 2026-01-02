@@ -47,7 +47,7 @@ export default function App() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       systems: [],
-      settings: { topN: DEFAULT_TOP_N },
+      settings: {},
       marketHub: "jita",
       market: { prices: buildSyntheticMarket(), lastFetched: null },
     };
@@ -87,7 +87,9 @@ export default function App() {
       if (idx >= 0) {
         systems[idx] = { ...systems[idx], name };
       } else {
-        systems.push({ id: uuid(), name, planets: [] });
+        const newSystem = { id: uuid(), name, planets: [] };
+        systems.push(newSystem);
+        setActiveSystemId(newSystem.id);
       }
       session.systems = systems;
     });
@@ -248,7 +250,7 @@ export default function App() {
         <div className="brand">
           <div className="orb" />
           <div>
-            <div className="title">Min Maxer</div>
+            <div className="title">PI - Min Maxer</div>
             <div className="subtitle">PI system scout for P1 profitability</div>
           </div>
         </div>
@@ -262,18 +264,6 @@ export default function App() {
             >
               {MARKET_HUBS.map((hub) => (
                 <option key={hub.id} value={hub.id}>{hub.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="hub-select">
-            <span>Top planets</span>
-            <select
-              value={activeSession?.settings.topN || DEFAULT_TOP_N}
-              onChange={(e) => setTopN(Number(e.target.value))}
-              disabled={!activeSession}
-            >
-              {[3, 4, 5].map((n) => (
-                <option key={n} value={n}>{n}</option>
               ))}
             </select>
           </label>
