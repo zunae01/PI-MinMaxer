@@ -37,7 +37,7 @@ export default function BuilderPanel({
   const handlePlanetSubmit = (e) => {
     e.preventDefault();
     const name = planetDraft.name.trim();
-    if (!name || !planetDraft.systemId) return;
+    if (!name || !planetDraft.systemId || !planetDraft.type) return;
     onUpsertPlanet(planetDraft);
     setPlanetDraft(blankPlanetDraft(planetDraft.systemId));
   };
@@ -46,6 +46,7 @@ export default function BuilderPanel({
 
   useEffect(() => {
     // Reset densities when type changes to avoid stale P0 keys.
+    if (!planetDraft.type) return;
     const next = {};
     (PLANET_TYPES[planetDraft.type] || []).forEach((p0) => {
       next[p0] = planetDraft.densities[p0] ?? 0;
@@ -120,7 +121,12 @@ export default function BuilderPanel({
                   <input value={planetDraft.name} onChange={(e) => setPlanetDraft((p) => ({ ...p, name: e.target.value }))} required />
                 </label>
                 <label>Planet type
-                  <select value={planetDraft.type} onChange={(e) => setPlanetDraft((p) => ({ ...p, type: e.target.value }))}>
+                  <select
+                    value={planetDraft.type}
+                    onChange={(e) => setPlanetDraft((p) => ({ ...p, type: e.target.value }))}
+                    required
+                  >
+                    <option value="" disabled>Select type</option>
                     {Object.keys(PLANET_TYPES).map((type) => (
                       <option key={type} value={type}>{type}</option>
                     ))}
@@ -140,21 +146,23 @@ export default function BuilderPanel({
                 </label>
               </div>
               <div className="p0-inputs">
-                {p0List.map((p0) => (
-                  <DensityInput
-                    key={p0}
-                    labelLeft={p0}
-                    labelRight={P0_TO_P1[p0]?.p1}
-                    value={planetDraft.densities[p0] ?? 0}
-                    max={100}
-                    onChange={(val) =>
-                      setPlanetDraft((p) => ({
-                        ...p,
-                        densities: { ...p.densities, [p0]: val },
-                      }))
-                    }
-                  />
-                ))}
+                {planetDraft.type
+                  ? p0List.map((p0) => (
+                      <DensityInput
+                        key={p0}
+                        labelLeft={p0}
+                        labelRight={P0_TO_P1[p0]?.p1}
+                        value={planetDraft.densities[p0] ?? 0}
+                        max={100}
+                        onChange={(val) =>
+                          setPlanetDraft((p) => ({
+                            ...p,
+                            densities: { ...p.densities, [p0]: val },
+                          }))
+                        }
+                      />
+                    ))
+                  : <div className="hint">Select a planet type to enter densities.</div>}
               </div>
               <div className="form-actions">
                 <button className="accent" type="submit">{planetDraft.id ? "Update planet" : "Add planet to System"}</button>
@@ -196,10 +204,7 @@ export default function BuilderPanel({
 }
 
 function blankPlanetDraft(systemId = "") {
-  const firstType = Object.keys(PLANET_TYPES)[0];
-  const densities = {};
-  (PLANET_TYPES[firstType] || []).forEach((p0) => (densities[p0] = 0));
-  return { id: null, name: "", type: firstType, systemId, densities };
+  return { id: null, name: "", type: "", systemId, densities: {} };
 }
 
 function DensityInput({ labelLeft, labelRight, value, max = 100, onChange }) {
