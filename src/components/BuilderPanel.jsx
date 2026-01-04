@@ -36,10 +36,12 @@ export default function BuilderPanel({
 
   const handlePlanetSubmit = (e) => {
     e.preventDefault();
-    const name = planetDraft.name.trim();
-    if (!name || !planetDraft.systemId || !planetDraft.type) return;
-    onUpsertPlanet(planetDraft);
-    setPlanetDraft(blankPlanetDraft(planetDraft.systemId));
+    const systemId = planetDraft.systemId;
+    const autoName = autoNameForSystem(systems, systemId);
+    const name = (planetDraft.manualName ? planetDraft.name : autoName || "").trim();
+    if (!name || !systemId || !planetDraft.type) return;
+    onUpsertPlanet({ ...planetDraft, name });
+    setPlanetDraft(blankPlanetDraft(systemId));
   };
 
   const p0List = PLANET_TYPES[planetDraft.type] || [];
@@ -57,9 +59,12 @@ export default function BuilderPanel({
   // Keep planet system selection synced to active system when not editing an existing planet.
   useEffect(() => {
     if (!planetDraft.id && activeSystemId) {
-      setPlanetDraft((prev) => ({ ...prev, systemId: activeSystemId }));
+      setPlanetDraft((prev) => {
+        const name = prev.manualName ? prev.name : autoNameForSystem(session?.systems, activeSystemId);
+        return { ...prev, systemId: activeSystemId, name };
+      });
     }
-  }, [activeSystemId, planetDraft.id]);
+  }, [activeSystemId, planetDraft.id, planetDraft.manualName, session?.systems]);
 
   return (
     <section className="panel workspace">
@@ -118,7 +123,27 @@ export default function BuilderPanel({
             <form className="planet-form" onSubmit={handlePlanetSubmit}>
               <div className="stack">
                 <label>Name
-                  <input value={planetDraft.name} onChange={(e) => setPlanetDraft((p) => ({ ...p, name: e.target.value }))} required />
+                  <input
+                    value={planetDraft.name}
+                    onChange={(e) => setPlanetDraft((p) => ({ ...p, name: e.target.value }))}
+                    required
+                    disabled={!planetDraft.manualName}
+                  />
+                  <label className="meta" style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={planetDraft.manualName}
+                      onChange={(e) =>
+                        setPlanetDraft((p) => {
+                          const manual = e.target.checked;
+                          return manual
+                            ? { ...p, manualName: true }
+                            : { ...p, manualName: false, name: autoNameForSystem(systems, p.systemId) };
+                        })
+                      }
+                    />
+                    Manual name (auto: {autoNameForSystem(systems, planetDraft.systemId) || "—"})
+                  </label>
                 </label>
                 <label>Planet type
                   <select
@@ -204,7 +229,7 @@ export default function BuilderPanel({
 }
 
 function blankPlanetDraft(systemId = "") {
-  return { id: null, name: "", type: "", systemId, densities: {} };
+  return { id: null, name: "", type: "", systemId, densities: {}, manualName: false };
 }
 
 function DensityInput({ labelLeft, labelRight, value, max = 100, onChange }) {
@@ -254,4 +279,40 @@ function DensityInput({ labelLeft, labelRight, value, max = 100, onChange }) {
       />
     </div>
   );
+}
+
+function autoNameForSystem(systems = [], systemId) {
+  if (!systemId) return "";
+  const sys = systems.find((s) => s.id === systemId);
+  if (!sys) return "";
+  const nextIndex = (sys.planets?.length || 0) + 1;
+  return `${sys.name} ${toRoman(nextIndex)}`;
+}
+
+function toRoman(num) {
+  if (!num || num < 1) return "";
+  const vals = [
+    [1000, "M"],
+    [900, "CM"],
+    [500, "D"],
+    [400, "CD"],
+    [100, "C"],
+    [90, "XC"],
+    [50, "L"],
+    [40, "XL"],
+    [10, "X"],
+    [9, "IX"],
+    [5, "V"],
+    [4, "IV"],
+    [1, "I"],
+  ];
+  let res = "";
+  let n = Math.floor(num);
+  for (const [v, sym] of vals) {
+    while (n >= v) {
+      res += sym;
+      n -= v;
+    }
+  }
+  return res;
 }
