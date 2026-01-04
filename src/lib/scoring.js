@@ -1,7 +1,7 @@
 import { PLANET_TYPES, P0_TO_P1, P1_INDEX, normalizeHistory } from "../data";
 
 // Planet scoring: only the single best material counts. EffectiveValue = P1 ISK/m3 * (abundance% / 100).
-export function calculatePlanetBest(planet, prices = {}) {
+export function calculatePlanetBest(planet, prices = {}, priceMode = "sell") {
   const p0List = PLANET_TYPES[planet.type] || Object.keys(planet.densities || {});
   const breakdown = [];
   let best = { p0: null, p1: null, value: 0, abundance: 0, p1IskPerM3: 0, history: [] };
@@ -10,7 +10,12 @@ export function calculatePlanetBest(planet, prices = {}) {
     const mapping = P0_TO_P1[p0];
     if (!mapping) return;
     const p1Meta = P1_INDEX[mapping.p1];
-    const price = prices[mapping.p1]?.price ?? p1Meta?.defaultPrice ?? 0;
+    const priceObj = prices[mapping.p1];
+    const price =
+      (priceMode === "buy" ? priceObj?.buy : priceObj?.sell ?? priceObj?.price) ??
+      priceObj?.price ??
+      p1Meta?.defaultPrice ??
+      0;
     const volume = p1Meta?.volume || 1;
     const p1IskPerM3 = price / volume;
     const abundance = planet.densities?.[p0] || 0;
@@ -32,10 +37,11 @@ export function calculatePlanetBest(planet, prices = {}) {
 export function rankSystems(session) {
   const marketPrices = session?.market?.prices || {};
   const topN = 6;
+  const priceMode = session?.settings?.priceMode || "sell";
 
   return (session?.systems || [])
     .map((system) => {
-      const planetScores = system.planets.map((p) => calculatePlanetBest(p, marketPrices));
+      const planetScores = system.planets.map((p) => calculatePlanetBest(p, marketPrices, priceMode));
       const sorted = [...planetScores].sort((a, b) => b.best.value - a.best.value);
       const topSlice = sorted.slice(0, topN);
       const score = topSlice.reduce((acc, p) => acc + p.best.value, 0);

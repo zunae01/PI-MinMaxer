@@ -47,7 +47,7 @@ export default function App() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       systems: [],
-      settings: {},
+      settings: { priceMode: "sell" },
       marketHub: "jita",
       market: { prices: buildSyntheticMarket(), lastFetched: null },
     };
@@ -153,6 +153,13 @@ export default function App() {
     if (!activeSession) return;
     updateSession(activeSession.id, (session) => {
       session.marketHub = hubId;
+    });
+  };
+
+  const setPriceMode = (mode) => {
+    if (!activeSession) return;
+    updateSession(activeSession.id, (session) => {
+      session.settings.priceMode = mode;
     });
   };
 
@@ -267,6 +274,17 @@ export default function App() {
               ))}
             </select>
           </label>
+          <label className="hub-select">
+            <span>Price mode</span>
+            <select
+              value={activeSession?.settings?.priceMode || "sell"}
+              onChange={(e) => setPriceMode(e.target.value)}
+              disabled={!activeSession}
+            >
+              <option value="sell">Sell</option>
+              <option value="buy">Buy</option>
+            </select>
+          </label>
           <button onClick={refreshMarket} disabled={!activeSession || marketLoading} className="accent">
             {marketLoading ? "Refreshing..." : "Refresh market"}
           </button>
@@ -319,7 +337,10 @@ function buildP1Modal(p1Name, session) {
   const meta = P1_INDEX[p1Name];
   if (!meta) return null;
   const priceObj = session?.market?.prices?.[p1Name];
-  const price = priceObj?.price ?? meta.defaultPrice;
+  const priceMode = session?.settings?.priceMode || "sell";
+  const price = priceMode === "buy"
+    ? priceObj?.buy ?? priceObj?.price ?? meta.defaultPrice
+    : priceObj?.sell ?? priceObj?.price ?? meta.defaultPrice;
   const buy = priceObj?.buy ?? price;
   const sell = priceObj?.sell ?? price;
   const historyObjs = session?.market?.prices?.[p1Name]?.history?.length
